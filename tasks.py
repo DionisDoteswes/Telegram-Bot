@@ -11,7 +11,7 @@ import yadisk
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# --- Настройка "Цеха" (Celery) ---
+# --- Настройка Celery ---
 app = Celery('tasks', broker='redis://localhost:6379/0', backend='redis://localhost:6379/0')
 
 # --- Настройка Логгера ---
@@ -90,7 +90,7 @@ def transcribe_from_yandex_disk_task(self, file_url: str) -> str:
         
         logger.info(f"Задача {self.request.id}: Файл с Яндекс.Диска успешно скачан.")
 
-        # --- ФАЗА 2: ОБРАБОТКА (КОД ОДИН И ТОТ ЖЕ!) ---
+        # --- ФАЗА 2: ОБРАБОТКА ---
         logger.info(f"Задача {self.request.id}: Начинаю транскрибацию...")
         result = model.transcribe(local_filename, language="ru")
         transcribed_text = result["text"]
@@ -101,7 +101,7 @@ def transcribe_from_yandex_disk_task(self, file_url: str) -> str:
         logger.error(f"Задача {self.request.id}: Произошла ошибка: {e}", exc_info=True)
         raise
     finally:
-        # --- ФАЗА 3: УБОРКА (КОД ОДИН И ТОТ ЖЕ!) ---
+        # --- ФАЗА 3: УБОРКА  ---
         logger.info(f"Задача {self.request.id}: Выполняю очистку временного файла {local_filename}")
         if os.path.exists(local_filename):
             os.remove(local_filename)
@@ -128,7 +128,6 @@ def transcribe_audio_task(self, file_path_on_server: str) -> str:
         logger.error(f"Задача {self.request.id}: Ошибка при скачивании файла: {e}")
         raise
 
-    # --- ТЕПЕРЬ ВСЕ КАК РАНЬШЕ ---
     # Мы передаем в Whisper путь к ЛОКАЛЬНОМУ, уже скачанному файлу
     try:
         result = model.transcribe(local_filename, language="ru") 
@@ -141,7 +140,7 @@ def transcribe_audio_task(self, file_path_on_server: str) -> str:
         raise
         
     finally:
-        # 3. Гарантированная уборка. Этот блок выполнится ВСЕГДА.
+        # 3. Гарантированная уборка.
         logger.info(f"Задача {self.request.id}: Выполняю очистку временного файла {local_filename}")
         if os.path.exists(local_filename):
             os.remove(local_filename)
