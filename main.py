@@ -1,4 +1,4 @@
-# main.py - ВЕРСИЯ 3.0 (Финальный релиз-кандидат)
+# main.py
 
 import asyncio
 import logging
@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from tasks import transcribe_audio_task, transcribe_from_google_drive_task 
 from tasks import transcribe_from_yandex_disk_task
 
-# --- Конфигурация (Пит-лейн) ---
+# --- Конфигурация ---
 # Загружаем секреты из файла .env
 load_dotenv() 
 
@@ -23,28 +23,28 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 if not TOKEN:
     raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set")
 
-# Настройка логирования - "Телеметрия"
+# Настройка логирования (для отладки)
 logging.basicConfig(level=logging.INFO)
 
 # Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# --- Состояния пользователя (Бортовой компьютер пилота) ---
+# --- Состояния пользователя ---
 class UserState(StatesGroup):
     idle = State()
     waiting_for_audio = State()
     processing_audio = State()
 
 
-# --- Обработчики команд (Переключатели на руле) ---
+# --- Обработчики команд ---
 
 @dp.message(CommandStart())
 async def start_command(message: types.Message, state: FSMContext):
     await message.answer('Привет! Я могу расшифровывать лекции. Пришли мне аудиофайл или ссылку, но прежде чем начать, убедись, что в аудио собеседник говорит четко и нет посторонних шумов.')
     await state.set_state(UserState.waiting_for_audio)
 
-# --- НОВЫЙ, ЕДИНЫЙ БЛОК ОБРАБОТЧИКОВ ---
+# ---ЕДИНЫЙ БЛОК ОБРАБОТЧИКОВ ---
 
 # 1. СНАЧАЛА - самое специфичное (АУДИО)
 @dp.message(F.content_type == ContentType.AUDIO, UserState.waiting_for_audio)
@@ -58,7 +58,7 @@ async def handle_audio(message: types.Message, state: FSMContext):
     task = transcribe_audio_task.delay(file_path_on_server)
     logging.info(f"Задача {task.id} (аудио) отправлена в Celery.")
 
-    # Общий код для ожидания результата (можно вынести в отдельную функцию!)
+    # Общий код для ожидания результата
     await wait_and_process_result(task, message, status_message, state)
 
 
@@ -115,14 +115,14 @@ async def wait_and_process_result(task, message, status_message, state):
 
 
 
-# --- Главная функция запуска бота (Старт гонки) ---
+# --- Главная функция запуска бота ---
 async def main():
     os.makedirs("downloads", exist_ok=True)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 
-# --- Запуск приложения (Поворот ключа зажигания) ---
+# --- Запуск приложения---
 if __name__ == "__main__":
     logging.info("Бот запускается...")
     asyncio.run(main())
